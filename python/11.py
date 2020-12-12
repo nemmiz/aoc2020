@@ -1,41 +1,56 @@
-def count_adjacent(grid, pos, max_pos):
+def calculate_adjacent(grid):
+    offsets = [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]
+    adjacency = {}
+    for pos in grid:
+        adjacent = []
+        for offset in offsets:
+            tmp = (pos[0] + offset[0],pos[1] + offset[1])
+            if tmp in grid:
+                adjacent.append(tmp)
+        adjacency[pos] = adjacent
+    return adjacency
+
+def calculate_visible(grid):
+    max_pos = max(grid.keys())
+    deltas = [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+    visibility = {}
+    for pos in grid:
+        visible = []
+        for delta in deltas:
+            tmp = pos
+            while True:
+                tmp = (tmp[0] + delta[0], tmp[1] + delta[1])
+                if tmp in grid:
+                    visible.append(tmp)
+                    break
+                if tmp[0] < 0 or tmp[1] < 0 or tmp[0] > max_pos[0] or tmp[1] > max_pos[1]:
+                    break
+        visibility[pos] = visible
+    return visibility
+
+def count(grid, pos, adjacency):
     n = 0
-    for offset in [(-1, -1), (0, -1), (1, -1), (-1, 0), (1, 0), (-1, 1), (0, 1), (1, 1)]:
-        if grid.get((pos[0]+offset[0],pos[1]+offset[1])) == '#':
+    for tmp in adjacency[pos]:
+        if grid[tmp] == '#':
             n += 1
     return n
 
-def count_visible(grid, pos, max_pos):
-    n = 0
-    for delta in [(0, -1), (0, 1), (-1, 0), (1, 0), (-1, -1), (-1, 1), (1, -1), (1, 1)]:
-        tmp = pos
-        while True:
-            tmp = (tmp[0] + delta[0], tmp[1] + delta[1])
-            if tmp in grid:
-                if grid.get(tmp) == '#':
-                    n += 1
-                break
-            if tmp[0] < 0 or tmp[1] < 0 or tmp[0] > max_pos[0] or tmp[1] > max_pos[1]:
-                break
-    return n
-
-def simulate(grid, count_func, tolerance):
-    new_grid = {}
-    max_pos = max(grid.keys())
+def simulate(grid, adjacency, tolerance):
+    changes = {}
     for pos, state in grid.items():
-        new_state = state
-        n = count_func(grid, pos, max_pos)
+        n = count(grid, pos, adjacency)
         if state == 'L' and n == 0:
-            new_state = '#'
+            changes[pos] = '#'
         elif state == '#' and n >= tolerance:
-            new_state = 'L'
-        new_grid[pos] = new_state
-    return new_grid
+            changes[pos] = 'L'
+    return changes
 
-def simulate_until_stable(grid, count_func, tolerance):
-    while (new_grid := simulate(grid, count_func, tolerance)) != grid:
-        grid = new_grid
-    return list(new_grid.values()).count('#')
+def simulate_until_stable(grid, vis_func, tolerance):
+    adjacency = vis_func(grid)
+    grid = grid.copy()
+    while (changes := simulate(grid, adjacency, tolerance)):
+        grid.update(changes)
+    return list(grid.values()).count('#')
 
 grid = {}
 with open('../input/11.txt') as stream:
@@ -44,5 +59,5 @@ with open('../input/11.txt') as stream:
             if c == 'L':
                 grid[(x, y)] = c
 
-print(simulate_until_stable(grid, count_adjacent, 4))
-print(simulate_until_stable(grid, count_visible, 5))
+print(simulate_until_stable(grid, calculate_adjacent, 4))
+print(simulate_until_stable(grid, calculate_visible, 5))
